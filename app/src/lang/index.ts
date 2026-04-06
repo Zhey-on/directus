@@ -25,12 +25,43 @@ export function translateAPIError(error: RequestError | string): string {
 	const defaultMsg = i18n.global.t('unexpected_error');
 
 	let code = error;
+	let errorExtensions: Record<string, unknown> | undefined;
+	let errorMessage: string | undefined;
 
 	if (typeof error === 'object') {
-		code = error?.response?.data?.errors?.[0]?.extensions?.code;
+		const firstError =
+			error?.response?.data?.errors?.[0] ||
+			(error as unknown as { errors?: Array<{ extensions?: Record<string, unknown>; message?: string }> })?.errors?.[0];
+
+		errorExtensions = firstError?.extensions;
+		errorMessage = firstError?.message;
+		code = errorExtensions?.['code'] as string | undefined;
 	}
 
 	if (!error || !code) return defaultMsg;
+
+	// Prefer specific validation detail messages over generic FAILED_VALIDATION.
+	if (code === 'FAILED_VALIDATION' && errorExtensions) {
+		if (errorExtensions['field'] === 'password' && errorExtensions['type'] === 'regex') {
+			const passwordPolicyKey = 'password_policy_validation_error';
+
+			if (i18n.global.te(passwordPolicyKey)) {
+				return i18n.global.t(passwordPolicyKey);
+			}
+		}
+
+		if (typeof errorExtensions['type'] === 'string') {
+			const validationKey = `validationError.${errorExtensions['type']}`;
+
+			if (i18n.global.te(validationKey)) {
+				return i18n.global.t(validationKey, errorExtensions);
+			}
+		}
+
+		if (errorMessage) {
+			return errorMessage;
+		}
+	}
 
 	const key = `errors.${code}`;
 	const exists = i18n.global.te(key);

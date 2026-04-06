@@ -842,6 +842,7 @@ tfa_scan_code: Scan the code in your authenticator app to finish setting up 2FA
 enter_otp_to_disable_tfa: Enter the OTP to disable 2FA
 create_account: Create Account
 account_created_successfully: Account Created Successfully
+password_policy_validation_error: Password doesn't meet the configured password policy
 auto_fill: Auto Fill
 corresponding_field: Corresponding Field
 errors:

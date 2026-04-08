@@ -4,6 +4,7 @@ import datetimeFormats from './date-formats.yaml';
 import numberFormats from './number-formats.yaml';
 import enUSBase from './translations/en-US.yaml';
 import { RequestError } from '@/api';
+import { extractFirstError } from '@/utils/extract-error-code';
 
 export const i18n = createI18n({
 	legacy: false,
@@ -24,21 +25,13 @@ export const loadedLanguages: Language[] = ['en-US'];
 export function translateAPIError(error: RequestError | string): string {
 	const defaultMsg = i18n.global.t('unexpected_error');
 
-	let code = error;
-	let errorExtensions: Record<string, unknown> | undefined;
-	let errorMessage: string | undefined;
-
-	if (typeof error === 'object') {
-		const firstError =
-			error?.response?.data?.errors?.[0] ||
-			(error as unknown as { errors?: Array<{ extensions?: Record<string, unknown>; message?: string }> })?.errors?.[0];
-
-		errorExtensions = firstError?.extensions;
-		errorMessage = firstError?.message;
-		code = errorExtensions?.['code'] as string | undefined;
+	if (typeof error === 'string') {
+		return error;
 	}
 
-	if (!error || !code) return defaultMsg;
+	const { code, extensions: errorExtensions, message: errorMessage } = extractFirstError(error);
+
+	if (!code || code === 'UNKNOWN') return defaultMsg;
 
 	// Prefer specific validation detail messages over generic FAILED_VALIDATION.
 	if (code === 'FAILED_VALIDATION' && errorExtensions) {
